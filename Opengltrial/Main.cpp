@@ -64,10 +64,13 @@ int main(int argc, char **argv) {
 
 	// Shaders & mesh
 	
+	glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &program.Cam.ctrlpoints[0][0]);
+	glEnable(GL_MAP1_VERTEX_3);
 
-	if (!program.LoadShaders("Vertexshader.glsl", "Fragmentshader.glsl") || !program.InitMesh("building\\building.obj"))
+	if (!program.LoadShaders("Vertexshader.glsl", "Fragmentshader.glsl") ||  !program.InitTerrain() || !program.InitMesh("building\\building.obj") )
 		return -1;
 
+	
 	
 
 	// Start the main event loop

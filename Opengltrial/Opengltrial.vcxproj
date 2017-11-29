@@ -129,6 +129,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Callbacks.cpp" />
+    <ClCompile Include="Header.cpp" />
     <ClCompile Include="Helpfunction.cpp" />
     <ClCompile Include="lodepng.cpp" />
     <ClCompile Include="Main.cpp" />

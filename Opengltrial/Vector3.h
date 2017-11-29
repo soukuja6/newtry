@@ -257,9 +257,9 @@ public:
 	template <class U>
     const Vector3<data_t>& operator/=(const U& f) {
         assert(f != 0.);
-		x() = x() * static_cast<data_t>(f);
-		y() = y() * static_cast<data_t>(f);
-		z() = z() * static_cast<data_t>(f);
+		x() = x() / static_cast<data_t>(f);
+		y() = y() / static_cast<data_t>(f);
+		z() = z() / static_cast<data_t>(f);
         return *this;
     }
 

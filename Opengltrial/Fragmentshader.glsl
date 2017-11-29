@@ -87,7 +87,7 @@ void main() {
 
 	float procentageoftexture = tex_vs_mat;
 
-	if(dist > 5.0) {procentageoftexture = min(procentageoftexture, clamp((7.0 - dist) / 2.0, 0.0, 1.0)); }              // if we are sufficiantly far away from object use only material 
+	if(dist > 20.0) {procentageoftexture = min(procentageoftexture, clamp((7.0 - dist) / 2.0, 0.0, 1.0)); }              // if we are sufficiantly far away from object use only material 
 
 	vec3 diffusecolor =  procentageoftexture * vec3(texture2D(sampler, cur_tex_coords)) + (1.0 - procentageoftexture) * material_d_color;   // blend the material and texture
 

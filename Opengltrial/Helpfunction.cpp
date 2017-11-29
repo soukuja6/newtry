@@ -3,6 +3,166 @@
 using namespace std;
 using  namespace std::experimental::filesystem;
 
+
+bool Programm::InitTerrain() {
+
+	glEvalCoord1f((GLfloat)10 / 30.0);
+	//open the file
+	int colsNum, rowsNum, NO_DATA;
+	double xLowLeft, yLowLeft, cellSize;
+
+	int numberOfPoints;
+	vector<float> correctindeces;
+
+	ifstream fileIn;
+	fileIn.open("terrain\\bergen_1024x918.bin", ios::binary);
+	rowsNum = 3072;
+	colsNum = 2754;
+	if (!fileIn.good()) {		//check if the file has been opened
+		cout << "Error opening the terrain file." << endl;
+		return false;
+	}
+
+	//struct to read values from the file
+	union { char cVals[4]; int iVal; } buffer4;
+	union { char cVals[8]; double dVal; } buffer8;
+	union { char* cVals; float* fVals; } bufferX;
+
+	//read the header
+	fileIn.read(buffer4.cVals, 4);
+	colsNum = buffer4.iVal;
+	fileIn.read(buffer4.cVals, 4);
+	rowsNum = buffer4.iVal;
+	fileIn.read(buffer8.cVals, 8);
+	xLowLeft = buffer8.dVal;
+	fileIn.read(buffer8.cVals, 8);
+	yLowLeft = buffer8.dVal;
+	fileIn.read(buffer8.cVals, 8);
+	cellSize = buffer8.dVal;
+	fileIn.read(buffer4.cVals, 4);
+	NO_DATA = buffer4.iVal;
+
+	//read the height values
+	numberOfPoints = rowsNum * colsNum;
+	bufferX.fVals = new float[numberOfPoints];
+	fileIn.read(bufferX.cVals, 4 * numberOfPoints);
+
+	//copy the height values in the global array
+	
+
+	xLowLeft = 0;// I dont need it
+	yLowLeft = 0;
+
+	int truindex = 0;
+	correctindeces.resize(numberOfPoints);
+	for (int i = 0; i < numberOfPoints; ++i) {
+		float height = bufferX.fVals[i];
+
+		if (height > NO_DATA) {
+			MyVertex vertex;
+			vertex.position = { (float)(floor(i / rowsNum)*cellSize + yLowLeft) , height,  (float)((i%rowsNum)*cellSize + xLowLeft) };
+			vertex.texcoords[0] = (i / rowsNum) / (colsNum - 1.0f) ;
+			vertex.texcoords[1] = (i % rowsNum) / (rowsNum - 1.0f);
+			if (vertex.texcoords[0] > 1 || vertex.texcoords[0] < 0 || vertex.texcoords[1] > 1 || vertex.texcoords[1] < 0) {
+				cout << "chyba";
+			}
+			terrain.vertices.push_back(vertex);
+			correctindeces[i] = truindex++;
+		}
+		else {
+			correctindeces[i] = -1;
+		}
+	}
+	fileIn.close(); //close the file
+
+	
+
+	for (int r = 0; r < rowsNum-1; r++) {
+		for (int c = 0; c < colsNum-1; c++) {
+			int i0 = correctindeces[c*rowsNum + r];
+			int i1 = correctindeces[c*rowsNum + r+1];
+			int i2 = correctindeces[(c+1)*rowsNum + r];
+			int i3 = correctindeces[(c+1)*rowsNum + r + 1];
+
+			if (i0 == -1 || i1 == -1 || i2 == -1 || i3 == -1) continue;
+			if ((terrain.vertices[i0].position - terrain.vertices[i3].position).magnitude() < (terrain.vertices[i1].position - terrain.vertices[i2].position).magnitude()) {
+				terrain.indices.push_back(i0);
+				terrain.indices.push_back(i1);
+				terrain.indices.push_back(i3);
+				terrain.indices.push_back(i0);
+				terrain.indices.push_back(i3);
+				terrain.indices.push_back(i2);
+			}
+			else {
+				terrain.indices.push_back(i0);
+				terrain.indices.push_back(i1);
+				terrain.indices.push_back(i2);
+				terrain.indices.push_back(i2);
+				terrain.indices.push_back(i1);
+				terrain.indices.push_back(i3);
+			}
+		}
+	}
+
+
+								// static vs dynamic
+	
+	terrain.GenerateNormals();
+
+	// Generate a VBO as in the previous tutorial
+	glGenBuffers(1, &terrain.VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, terrain.VBO);
+	glBufferData(GL_ARRAY_BUFFER,
+		terrain.vertices.size() * sizeof(MyVertex),
+		terrain.vertices.data(),
+		GL_STATIC_DRAW);
+
+
+	// Create a buffer
+	glGenBuffers(1, &terrain.IBO);
+	// Set it as a buffer for indices
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, terrain.IBO);
+
+	// Set the data for the current IBO
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER,				// the target
+		terrain.GetNumberOfTriangles() * 3 * sizeof(int), // the size of the data
+		terrain.indices.data(),										// pointer to the data
+		GL_STATIC_DRAW);
+
+	if (!Loadtexture("terrain\\bergen_terrain_texture.png", terrain.texture0, true)) {
+		return false;
+	}
+	return true;
+}
+
+void MyModel::GenerateNormals() {
+	vector<Vector3f> trinaglenormals(GetNumberOfTriangles());
+	for (int i = 0; i < GetNumberOfTriangles(); i++) {
+		auto & v0 = vertices[indices[3 * i]].position;
+		auto & v1 = vertices[indices[3 * i+1]].position;
+		auto & v2 = vertices[indices[3 * i+2]].position;
+
+		trinaglenormals[i] = (v1 - v0).cross(v2 - v0);
+	}
+
+	vector<vector<int>> trinaglespervertex(Getnumberofvertices());
+
+	for (size_t i = 0; i < indices.size(); i++) {
+		trinaglespervertex[indices[i]].push_back(i/3);
+	}
+
+	for (size_t i = 0; i < Getnumberofvertices(); i++) {
+		vertices[i].normal = { 0,0,0 };
+		for (auto && tri : trinaglespervertex[i]) {
+			vertices[i].normal += trinaglenormals[tri];
+		}
+		vertices[i].normal.normalize();
+	}
+
+
+}
+
+
 // Initialize buffer objects
 bool Programm::InitMesh(string location) {
 	//--------------------------------cube----------------------------------
@@ -131,14 +291,16 @@ bool Programm::Loadmodel(Modelclass & model, string filename, string pathname) {
 	return true;
 }
 
-bool Programm::Loadtexture(std::string texturename, Texture & texture) {
+bool Programm::Loadtexture(std::string texturename, Texture & texture, bool alfa) {
 	auto & act = texture;
 
 	if (act.TextureData != nullptr)
 		free(act.TextureData);
+	auto colortype = LCT_RGB;
+	if (alfa) colortype = LCT_RGBA;
 	unsigned int fail = lodepng_decode_file(&act.TextureData, &act.TextureWidth, &act.TextureHeight,
 		texturename.c_str(),
-		LCT_RGB, 8); // Remember to check the last 2 parameters
+		colortype, 8); // Remember to check the last 2 parameters
 	if (fail != 0) {
 		cerr << "Error: cannot load texture file "
 			<< texturename << endl;
@@ -154,14 +316,16 @@ bool Programm::Loadtexture(std::string texturename, Texture & texture) {
 	glBindTexture(GL_TEXTURE_2D, act.TextureObject);
 
 	// Set the texture data
+	auto colortypee = GL_RGB;
+	if (alfa) colortypee = GL_RGBA;
 	glTexImage2D(
 		GL_TEXTURE_2D,
 		0,
-		GL_RGB,			// remember to check this
+		colortypee,			// remember to check this
 		act.TextureWidth,
 		act.TextureHeight,
 		0,
-		GL_RGB,			// remember to check this
+		colortypee,			// remember to check this
 		GL_UNSIGNED_BYTE,
 		act.TextureData
 	);
@@ -295,4 +459,30 @@ void Camera::Reset()
 	zNear = 0.1f;
 	zFar = 100.f;
 	zoom = 1.f;
+}
+
+void Camera::Setpath(std::vector<Vector3f> points) {
+	ctrlpoints = points;
+	int n = points.size()-1;
+	int k, i;
+	binomialcoef.clear();
+	binomialcoef.resize(n+1);
+	for (k = 0; k <= n; k++) {
+		binomialcoef[k] = 1;
+		for (i = n; i >= k + 1; i--)
+			binomialcoef[k] *= i;
+		for (i = n - k; i >= 2; i--)
+			binomialcoef[k] /= i;
+	}
+}
+
+Vector3f Camera::Evaluatepoint(float t) {
+	Vector3f point = {0,0,0};
+	int n = ctrlpoints.size()-1;
+	for (int k = 0; k<=n; k++) {
+		float el = binomialcoef[k] * pow(t, k)*pow(1 - t, n - k);
+		point += ctrlpoints[k] * el;
+		
+	}
+	return point;
 }

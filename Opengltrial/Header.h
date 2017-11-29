@@ -33,11 +33,36 @@ enum Projections
 	Perspective
 };
 
+struct Texture {
+	GLuint TextureObject = 0;				///< A texture object
+	unsigned int TextureWidth = 0;			///< The width of the current texture
+	unsigned int TextureHeight = 0;			///< The height of the current texture
+	unsigned char *TextureData = nullptr;	///< the array where the texture image will be stored
+};
+
 struct MyVertex
 {
 	Vector3f position;
 	float texcoords[2];
 	Vector3f normal;
+};
+
+struct MyModel {
+	std::vector<MyVertex> vertices;
+	std::vector<int> indices;
+	GLuint VBO = 0;	// A vertex buffer object
+	GLuint IBO = 0;	// An index buffer object
+	Texture texture0;
+
+	int GetNumberOfTriangles() {
+		return indices.size() / 3;
+	}
+
+	int Getnumberofvertices() {
+		return vertices.size();
+	}
+
+	void GenerateNormals();
 };
 
 struct Light {
@@ -129,15 +154,14 @@ struct Camera {
 
 	Projections projection=Perspective;
 
+	void Setpath(std::vector<Vector3f> points);
+	Vector3f Evaluatepoint(float t);
+	std::vector<Vector3f> ctrlpoints;
+	std::vector<long long> binomialcoef;
 
 };
 
-struct Texture {
-	GLuint TextureObject = 0;				///< A texture object
-	unsigned int TextureWidth = 0;			///< The width of the current texture
-	unsigned int TextureHeight = 0;			///< The height of the current texture
-	unsigned char *TextureData = nullptr;	///< the array where the texture image will be stored
-};
+
 
 struct Modelclass {
 	ModelOBJ Model;		// A 3D model
@@ -152,6 +176,8 @@ public:
 		Cam.Reset();
 		lasttime = clock();
 		texturevsmaterialindex = 1.0;
+		Cam.Setpath({ { 0.0,0.0,0.0 },{ 2.0,2.0,2.0 },{ 2.0,2.0,-3.0 },{ 0.0,0.0,0.0 } });
+		Cam.Evaluatepoint(0.5);
 	}
 
 
@@ -175,6 +201,10 @@ public:
 	///</summary>
 	bool InitMesh(std::string location);
 
+	// load terrain
+	bool InitTerrain();
+
+
 	///<summary>
 	///load shaders
 	///<summary>
@@ -183,17 +213,21 @@ public:
 	///<summary>
 	///load texture;
 	///<summary>
-	bool Loadtexture(std::string texturename, Texture & texture);
+	bool Loadtexture(std::string texturename, Texture & texture, bool alfa = false);
 	
 	bool Loadmodel(Modelclass & model, std::string filename, std::string pathname);    //loads model(filename contains whole name of file and path name only path to directory
 
 	// 3D model
 	Modelclass building;
+
+	bool movecamera = false;
+	float cameracoef = 0;
 	bool rotatebuilding = true;
 	double buildingangle = 0.0;
 
 	Modelclass dragon;
 
+	MyModel terrain;
 
 	GLuint VBOT = 0;	// A vertex buffer object of cube
 	GLuint IBOT = 0;	// An index buffer object  of cube

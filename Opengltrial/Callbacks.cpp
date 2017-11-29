@@ -159,6 +159,7 @@ void Programm::display() {
 		glUniform1ui(Toonloc, false);              // no toon shading 
 		// Enable texture unit 0 and bind the texture to it
 		glActiveTexture(GL_TEXTURE0);
+		//glBindTexture(GL_TEXTURE_2D, terrain.texture0.TextureObject);
 		glBindTexture(GL_TEXTURE_2D, cinematexture[(int)(difference * cinematexture.size())].TextureObject);   //bind texture
 
 		glUniform1f(texturevsmaterialindexloc, texturevsmaterialindex);   // how much does the texture influence the colour
@@ -228,7 +229,7 @@ void Programm::display() {
 			reinterpret_cast<const GLvoid*>(sizeof(float[3]) + sizeof(float[2])));
 
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
-			sizeof(MyVertex),
+			sizeof(ModelOBJ::Vertex),
 			reinterpret_cast<const GLvoid*>(sizeof(Vector3f)));
 
 		glDrawElements(
@@ -238,6 +239,53 @@ void Programm::display() {
 			0);	
 	
 	}
+
+
+	{//---------------------------------------------------draw terrain---------------------------------------------------------------
+
+		vertextoworldtr= Matrix4f::createScaling(0.001,0.001,0.001);
+		normaltr.identity();
+		glUniform1ui(Bumploc, false);              // no bump mapping
+		glUniform1ui(Toonloc, false);              // apply toon shading 
+
+		glUniform1f(texturevsmaterialindexloc, texturevsmaterialindex);
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, terrain.texture0.TextureObject);
+
+		glUniformMatrix4fv(PointTrLocation, 1, GL_FALSE, vertextoworldtr.get());
+		glUniformMatrix4fv(NormalTrLocation, 1, GL_FALSE, normaltr.get());
+
+		glUniform3f(MaterialAColorLoc, 0, 0.5, 0.5);
+		glUniform3f(MaterialDColorLoc, 0, 0.5, 0.5);
+		glUniform3f(MaterialSColorLoc, 1.0, 1.0, 1.0);
+		glUniform1f(MaterialShineLoc, 20);
+
+
+		// Bind the buffers
+		glBindBuffer(GL_ARRAY_BUFFER, terrain.VBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, terrain.IBO);
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+			sizeof(MyVertex),
+			reinterpret_cast<const GLvoid*>(0));
+
+		glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE,
+			sizeof(MyVertex),
+			reinterpret_cast<const GLvoid*>(sizeof(float[3]) + sizeof(float[2])));
+
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE,
+			sizeof(MyVertex),
+			reinterpret_cast<const GLvoid*>(sizeof(Vector3f)));
+
+		glDrawElements(
+			GL_TRIANGLES,
+			terrain.GetNumberOfTriangles() * 3,
+			GL_UNSIGNED_INT,
+			0);
+
+	}
+
 
 
 
@@ -266,6 +314,14 @@ void Programm::idle() {
 		buildingangle += (double)(now - lasttime) / CLOCKS_PER_SEC / 5;
 		if (buildingangle >= 1.0)
 			buildingangle -= floor(buildingangle);
+	}
+
+	if (movecamera) {
+		cameracoef += (double)(now - lasttime) / CLOCKS_PER_SEC / 5;
+		if (cameracoef >= 1.0)
+			cameracoef -= floor(cameracoef);
+
+		Cam.position = Cam.Evaluatepoint(cameracoef);
 	}
 
 	difference += (double)(now- lasttime)/CLOCKS_PER_SEC /5;
@@ -357,6 +413,11 @@ void Programm::keyboard(unsigned char key, int x, int y) {
 
 	case 'm':  // terminate the application
 		rotatebuilding = !rotatebuilding;
+		break;
+
+	case 'n':  // terminate the application
+		movecamera = !movecamera;
+		cameracoef = 0;
 		break;
 	case 'q':  // terminate the application
 		exit(0);
