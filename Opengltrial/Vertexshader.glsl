@@ -28,7 +28,7 @@ out vec4 fcolor;
 out vec3 positionout;
 out vec3 normalout;
 out vec3 tangentout;
-
+out float originalzcoordinate;
 void main() {
 	// transform the vertex
     gl_Position = transformation * vertextransformation * vec4(position, 1.);	
@@ -37,6 +37,7 @@ void main() {
 	positionout = vec3(vertextransformation*vec4(position, 1.));
 	normalout = normalize(vec3(normaltransformation*vec4(normal,1.))) ;
 	tangentout = normalize(vec3(vertextransformation*vec4(tangent,1.))) ;
+	originalzcoordinate = position.y;
 	
 }
 

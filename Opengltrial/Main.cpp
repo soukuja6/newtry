@@ -64,13 +64,16 @@ int main(int argc, char **argv) {
 
 	// Shaders & mesh
 	
-	glMap1f(GL_MAP1_VERTEX_3, 0.0, 1.0, 3, 4, &program.Cam.ctrlpoints[0][0]);
-	glEnable(GL_MAP1_VERTEX_3);
-
-	if (!program.LoadShaders("Vertexshader.glsl", "Fragmentshader.glsl") ||  !program.InitTerrain() || !program.InitMesh("building\\building.obj") )
+	program.skybox.Init();
+	if (!program.skybox.Load("shader.v.glsl", "shader.f.glsl") || !program.skybox.Loadtextures())
 		return -1;
 
 	
+	if (!program.LoadShaders("Vertexshader.glsl", "Fragmentshader.glsl") ||  !program.InitTerrain("terrain\\bergen_1024x918.bin") || !program.InitMesh("building\\building.obj") )
+		return -1;
+
+
+	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);          // We'll Clear To The Color Of The Fog ( Modified )
 	
 
 	// Start the main event loop
@@ -82,6 +85,11 @@ int main(int argc, char **argv) {
 			free(texture.TextureData);
 	}
 
+	for (auto && texture : program.cinematexture) {
+		if (texture.TextureData != nullptr)
+			free(texture.TextureData);
+	}
+
 	for (auto && texture : program.dragon.maintexture) {
 		if (texture.TextureData != nullptr)
 			free(texture.TextureData);
@@ -89,6 +97,8 @@ int main(int argc, char **argv) {
 
 	if (program.bumptexture.TextureData != nullptr)
 		free(program.bumptexture.TextureData);
+
+	program.terrain.Reset();
 	return 0;
 }
 

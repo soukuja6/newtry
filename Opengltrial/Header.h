@@ -38,6 +38,12 @@ struct Texture {
 	unsigned int TextureWidth = 0;			///< The width of the current texture
 	unsigned int TextureHeight = 0;			///< The height of the current texture
 	unsigned char *TextureData = nullptr;	///< the array where the texture image will be stored
+	void Delete() {
+		if (TextureObject != 0)
+			glDeleteTextures(1, &TextureObject);
+		if (TextureData != nullptr)
+			free(TextureData);
+	}
 };
 
 struct MyVertex
@@ -48,6 +54,18 @@ struct MyVertex
 };
 
 struct MyModel {
+	void Reset() {
+		vertices.clear();
+		indices.clear();
+		if (texture0.TextureData != nullptr) {
+			free(texture0.TextureData);
+			texture0.TextureData = nullptr;
+		}
+
+		glDeleteBuffers(1, &IBO);
+		glDeleteBuffers(1, &VBO);
+	}
+
 	std::vector<MyVertex> vertices;
 	std::vector<int> indices;
 	GLuint VBO = 0;	// A vertex buffer object
@@ -72,7 +90,7 @@ struct Light {
 
 	void Reset() {
 		lightAColor = { 0.05f, 0.03f, 0.0f };
-		lightDColor = { 0.9f, 0.9f, 0.9f };
+		lightDColor = { 1.0f, 1.0f, 1.0f };
 		lightSColor = { 0.6f, 0.6f, 0.7f };
 		lightAIntensity= 1.0f;
 		lightDIntensity = 1.0f;
@@ -154,10 +172,17 @@ struct Camera {
 
 	Projections projection=Perspective;
 
-	void Setpath(std::vector<Vector3f> points);
+	void Setpath(std::vector<Vector3f> points);  //set the control points
+	void Setpath2(std::vector<Vector3f> points);  //set the control points
+
+
 	Vector3f Evaluatepoint(float t);
+	Vector3f Evaluatepoint2(float t);
+
 	std::vector<Vector3f> ctrlpoints;
+	std::vector<Vector3f> ctrlpoints2;
 	std::vector<long long> binomialcoef;
+	std::vector<long long> binomialcoef2;
 
 };
 
@@ -170,13 +195,64 @@ struct Modelclass {
 	std::vector<Texture> maintexture;            //stored textures
 };
 
+
+struct SkyBox{
+	void Init() {
+		// cube vertices for vertex buffer object
+		vertices = {
+			-1.0,  1.0,  1.0,
+			-1.0, -1.0,  1.0,
+			1.0, -1.0,  1.0,
+			1.0,  1.0,  1.0,
+			-1.0,  1.0, -1.0,
+			-1.0, -1.0, -1.0,
+			1.0, -1.0, -1.0,
+			1.0,  1.0, -1.0,
+		};
+		
+		glGenBuffers(1, &VBO);
+		glBindBuffer(GL_ARRAY_BUFFER, VBO);
+		glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(float), vertices.data(), GL_STATIC_DRAW);
+		//glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+		// cube indices for index buffer object
+		indices = {
+			0, 3, 2, 1,
+			3, 7, 6, 2,
+			7, 4, 5, 6,
+			4, 0, 1, 5,
+			0, 4, 7, 3,
+			1, 2, 6, 5,
+		};
+		//soren henning
+		glGenBuffers(1, &IBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+		glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int)*indices.size(), indices.data(), GL_STATIC_DRAW);
+		//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	}
+	std::vector<float> vertices;
+	std::vector<int> indices;
+	GLuint VBO;
+	GLuint IBO;
+	bool Load(std::string vertexshader, std::string fragmentshader);
+	bool Loadtextures();
+
+	GLuint ShaderProgram = 0;	// A shader program
+
+	GLuint Matrixloc = -1;
+
+	GLuint smaplerloc = -1;
+	GLuint cubemaptexture = -1;
+};
+
 class Programm {
 public:
 	Programm() {
 		Cam.Reset();
 		lasttime = clock();
 		texturevsmaterialindex = 1.0;
-		Cam.Setpath({ { 0.0,0.0,0.0 },{ 2.0,2.0,2.0 },{ 2.0,2.0,-3.0 },{ 0.0,0.0,0.0 } });
+		Cam.Setpath({ { 0.0f, 0.0f, 5.0f },{ 10.0f, 0.0f, 5.0f },{ 3.0f, 0.5f, -8.0f },{ 3.0f, 100.0f, -8.0f },{ -20.0f, 100.0f, -500.0f }, { -20.0f, 100.0f, -8.0f },{ -20.0f, 0.5f, -8.0f },{ -10.0f, 0.0f, 5.0f },{ 0.0f, 0.0f, 5.0f } });  
+		Cam.Setpath2({ { 0.0f, 0.0f, -1.0f }, { 0.0f, -0.1f, -1.0f },{ 0.0f,  -0.1f, 0.0f }, { -1.0f,  -0.1f, 0.0f },{ 0.0f,  -0.1f, 1.0f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f, -1.0f },{ 0.0f, 0.0f, -1.0f } });
 		Cam.Evaluatepoint(0.5);
 	}
 
@@ -202,7 +278,7 @@ public:
 	bool InitMesh(std::string location);
 
 	// load terrain
-	bool InitTerrain();
+	bool InitTerrain(std::string name);
 
 
 	///<summary>
@@ -213,7 +289,7 @@ public:
 	///<summary>
 	///load texture;
 	///<summary>
-	bool Loadtexture(std::string texturename, Texture & texture, bool alfa = false);
+	static bool Loadtexture(std::string texturename, Texture & texture, bool alfa = false);
 	
 	bool Loadmodel(Modelclass & model, std::string filename, std::string pathname);    //loads model(filename contains whole name of file and path name only path to directory
 
@@ -221,6 +297,10 @@ public:
 	Modelclass building;
 
 	bool movecamera = false;
+	bool movecamera2 = false;
+	bool coloursbyheight = false;
+	GLint colourbyheightloc;
+
 	float cameracoef = 0;
 	bool rotatebuilding = true;
 	double buildingangle = 0.0;
@@ -228,6 +308,8 @@ public:
 	Modelclass dragon;
 
 	MyModel terrain;
+
+	SkyBox skybox;
 
 	GLuint VBOT = 0;	// A vertex buffer object of cube
 	GLuint IBOT = 0;	// An index buffer object  of cube

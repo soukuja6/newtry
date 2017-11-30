@@ -4,7 +4,7 @@ using namespace std;
 using  namespace std::experimental::filesystem;
 
 
-bool Programm::InitTerrain() {
+bool Programm::InitTerrain(string name) {
 
 	glEvalCoord1f((GLfloat)10 / 30.0);
 	//open the file
@@ -15,7 +15,7 @@ bool Programm::InitTerrain() {
 	vector<float> correctindeces;
 
 	ifstream fileIn;
-	fileIn.open("terrain\\bergen_1024x918.bin", ios::binary);
+	fileIn.open(name.data(), ios::binary);
 	rowsNum = 3072;
 	colsNum = 2754;
 	if (!fileIn.good()) {		//check if the file has been opened
@@ -26,8 +26,9 @@ bool Programm::InitTerrain() {
 	//struct to read values from the file
 	union { char cVals[4]; int iVal; } buffer4;
 	union { char cVals[8]; double dVal; } buffer8;
-	union { char* cVals; float* fVals; } bufferX;
+	//union { char* cVals; float* fVals; } bufferX;
 
+	
 	//read the header
 	fileIn.read(buffer4.cVals, 4);
 	colsNum = buffer4.iVal;
@@ -44,8 +45,10 @@ bool Programm::InitTerrain() {
 
 	//read the height values
 	numberOfPoints = rowsNum * colsNum;
-	bufferX.fVals = new float[numberOfPoints];
-	fileIn.read(bufferX.cVals, 4 * numberOfPoints);
+	//bufferX.fVals = new float[numberOfPoints];
+
+	vector<float> buff(numberOfPoints);
+	fileIn.read((char *)buff.data(), 4 * numberOfPoints);
 
 	//copy the height values in the global array
 	
@@ -56,13 +59,13 @@ bool Programm::InitTerrain() {
 	int truindex = 0;
 	correctindeces.resize(numberOfPoints);
 	for (int i = 0; i < numberOfPoints; ++i) {
-		float height = bufferX.fVals[i];
+		float height = buff[i];
 
 		if (height > NO_DATA) {
 			MyVertex vertex;
 			vertex.position = { (float)(floor(i / rowsNum)*cellSize + yLowLeft) , height,  (float)((i%rowsNum)*cellSize + xLowLeft) };
-			vertex.texcoords[0] = (i / rowsNum) / (colsNum - 1.0f) ;
-			vertex.texcoords[1] = (i % rowsNum) / (rowsNum - 1.0f);
+			vertex.texcoords[0] = ( i / rowsNum) / (colsNum - 1.0f) ;
+			vertex.texcoords[1] = ( i % rowsNum) / (rowsNum - 1.0f) ;
 			if (vertex.texcoords[0] > 1 || vertex.texcoords[0] < 0 || vertex.texcoords[1] > 1 || vertex.texcoords[1] < 0) {
 				cout << "chyba";
 			}
@@ -74,7 +77,7 @@ bool Programm::InitTerrain() {
 		}
 	}
 	fileIn.close(); //close the file
-
+	
 	
 
 	for (int r = 0; r < rowsNum-1; r++) {
@@ -84,22 +87,30 @@ bool Programm::InitTerrain() {
 			int i2 = correctindeces[(c+1)*rowsNum + r];
 			int i3 = correctindeces[(c+1)*rowsNum + r + 1];
 
-			if (i0 == -1 || i1 == -1 || i2 == -1 || i3 == -1) continue;
+			//if (i0 == -1 || i1 == -1 || i2 == -1 || i3 == -1) continue;
 			if ((terrain.vertices[i0].position - terrain.vertices[i3].position).magnitude() < (terrain.vertices[i1].position - terrain.vertices[i2].position).magnitude()) {
-				terrain.indices.push_back(i0);
-				terrain.indices.push_back(i1);
-				terrain.indices.push_back(i3);
-				terrain.indices.push_back(i0);
-				terrain.indices.push_back(i3);
-				terrain.indices.push_back(i2);
+				if (!(i0 == -1 || i1 == -1 || i3 == -1)) {
+					terrain.indices.push_back(i0);
+					terrain.indices.push_back(i1);
+					terrain.indices.push_back(i3);
+				}
+				if (!(i0 == -1 || i2 == -1 || i3 == -1)) {
+					terrain.indices.push_back(i0);
+					terrain.indices.push_back(i3);
+					terrain.indices.push_back(i2);
+				}
 			}
 			else {
-				terrain.indices.push_back(i0);
-				terrain.indices.push_back(i1);
-				terrain.indices.push_back(i2);
-				terrain.indices.push_back(i2);
-				terrain.indices.push_back(i1);
-				terrain.indices.push_back(i3);
+				if (!(i0 == -1 || i2 == -1 || i1 == -1)) {
+					terrain.indices.push_back(i0);
+					terrain.indices.push_back(i1);
+					terrain.indices.push_back(i2);
+				}
+				if (!(i1 == -1 || i2 == -1 || i3 == -1)) {
+					terrain.indices.push_back(i2);
+					terrain.indices.push_back(i1);
+					terrain.indices.push_back(i3);
+				}
 			}
 		}
 	}
@@ -333,6 +344,8 @@ bool Programm::Loadtexture(std::string texturename, Texture & texture, bool alfa
 	// Configure texture parameter
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	return true;
 }
 
 bool Programm::LoadShaders(std::string vertexshader, std::string fragmentshader)
@@ -343,45 +356,54 @@ bool Programm::LoadShaders(std::string vertexshader, std::string fragmentshader)
 		return false;
 
 	ShaderProgram = loader.shader;
-	TrLocation = loader.TrLocation;
-	PointTrLocation = loader.PointTrLocation;
-	NormalTrLocation = loader.NormalTrLocation;
-
-	CameraPositionLoc = loader.CameraPositionLoc;
-	CameraDirLoc = loader.CameraDirLoc;
-	DirectionalLoc = loader.DirectionalLoc;
-	Bumploc = loader.BumpLoc;
-	Toonloc = loader.Toonloc;
-	texturevsmaterialindexloc = loader.texturevsmaterialindex;
-
-	dLight.dLightDirLoc = loader.DLightDirLoc;
-	dLight.lightAColorLoc = loader.DLightAColorLoc;
-	dLight.lightDColorLoc = loader.DLightDColorLoc;
-	dLight.lightSColorLoc = loader.DLightSColorLoc;
-	dLight.lightAIntensityLoc = loader.DLightAIntensityLoc;
-	dLight.lightDIntensityLoc = loader.DLightDIntensityLoc;
-	dLight.lightSIntensityLoc = loader.DLightSIntensityLoc;
-
-	pLight.anglerestictionloc = loader.anglerestrictionloc;
-	pLight.angledecreasecoefloc = loader.angledecreaseloc;
-	pLight.klinearloc = loader.klinearloc;
-	pLight.ksquaredloc = loader.ksquaredloc;
-	pLight.lightAColorLoc = loader.PLightAColorLoc;
-	pLight.lightDColorLoc = loader.PLightDColorLoc;
-	pLight.lightSColorLoc = loader.PLightSColorLoc;
-	pLight.lightAIntensityLoc = loader.PLightAIntensityLoc;
-	pLight.lightDIntensityLoc = loader.PLightDIntensityLoc;
-	pLight.lightSIntensityLoc = loader.PLightSIntensityLoc;
 
 
-	MaterialAColorLoc = loader.MaterialAColorLoc;
-	MaterialDColorLoc = loader.MaterialDColorLoc;
-	MaterialSColorLoc = loader.MaterialSColorLoc;
-	MaterialShineLoc = loader.MaterialShineLoc;
+	
+	// Get the location of the uniform variables
+	TrLocation = glGetUniformLocation(ShaderProgram, "transformation");
+	PointTrLocation = glGetUniformLocation(ShaderProgram, "vertextransformation");
+	NormalTrLocation = glGetUniformLocation(ShaderProgram, "normaltransformation");
+	CameraPositionLoc = glGetUniformLocation(ShaderProgram, "camera_position");
+	CameraDirLoc = glGetUniformLocation(ShaderProgram, "cameradir");
+	DirectionalLoc = glGetUniformLocation(ShaderProgram, "directional");
+	Bumploc = glGetUniformLocation(ShaderProgram, "applybump");
+	Toonloc = glGetUniformLocation(ShaderProgram, "applytoon");
+	texturevsmaterialindexloc = glGetUniformLocation(ShaderProgram, "tex_vs_mat");
+	colourbyheightloc = glGetUniformLocation(ShaderProgram, "colourbyheight");
+
+	dLight.dLightDirLoc = glGetUniformLocation(ShaderProgram, "d_light_direction");
+	dLight.lightAColorLoc = glGetUniformLocation(ShaderProgram, "d_light_a_color");
+	dLight.lightDColorLoc = glGetUniformLocation(ShaderProgram, "d_light_d_color");
+	dLight.lightSColorLoc = glGetUniformLocation(ShaderProgram, "d_light_s_color");
+	dLight.lightAIntensityLoc = glGetUniformLocation(ShaderProgram, "d_light_a_intensity");
+	dLight.lightDIntensityLoc = glGetUniformLocation(ShaderProgram, "d_light_d_intensity");
+	dLight.lightSIntensityLoc = glGetUniformLocation(ShaderProgram, "d_light_s_intensity");
+
+	pLight.klinearloc = glGetUniformLocation(ShaderProgram, "klinear");
+	pLight.ksquaredloc = glGetUniformLocation(ShaderProgram, "ksquared");
+	pLight.anglerestictionloc = glGetUniformLocation(ShaderProgram, "anglerest");
+	pLight.angledecreasecoefloc = glGetUniformLocation(ShaderProgram, "angledecrease");
+	pLight.lightAColorLoc = glGetUniformLocation(ShaderProgram, "p_light_a_color");
+	pLight.lightDColorLoc = glGetUniformLocation(ShaderProgram, "p_light_d_color");
+	pLight.lightSColorLoc = glGetUniformLocation(ShaderProgram, "p_light_s_color");
+	pLight.lightAIntensityLoc = glGetUniformLocation(ShaderProgram, "p_light_a_intensity");
+	pLight.lightDIntensityLoc = glGetUniformLocation(ShaderProgram, "p_light_d_intensity");
+	pLight.lightSIntensityLoc = glGetUniformLocation(ShaderProgram, "p_light_s_intensity");
+
+
+	MaterialAColorLoc = glGetUniformLocation(ShaderProgram, "material_a_color");
+	MaterialDColorLoc = glGetUniformLocation(ShaderProgram, "material_d_color");
+	MaterialSColorLoc = glGetUniformLocation(ShaderProgram, "material_s_color");
+	MaterialShineLoc = glGetUniformLocation(ShaderProgram, "material_shininess");
+
+	assert(TrLocation != -1);  // check for errors (variable not found)
+
 	return true;
 }
 
 Matrix4f Camera::computeTransformToworldcoordinates() {
+	// camera rotation
+
 	Vector3f t = target.getNormalized();
 	Vector3f u = up.getNormalized();
 	Vector3f r = t.cross(u);
@@ -392,7 +414,27 @@ Matrix4f Camera::computeTransformToworldcoordinates() {
 
 	// camera translation
 	Matrix4f camT = Matrix4f::createTranslation(-position);     // minus because we are translation object and not camera
-	return camR*camT;
+
+																// perspective projection
+	Matrix4f prj;
+	if (projection == Projections::Perspective)
+		prj = Matrix4f::createPerspectivePrj(fov, ar, zNear, zFar);
+	else {
+		int x = 2;
+		prj = Matrix4f::createOrthoPrj(-ar*x / 2.0f, ar*x / 2.0f, -x / 2.0f, x / 2.0f, zNear, zFar);
+		/*prj = Matrix4f(1.f, 0.f, 0.f, 0.f,                          //orthogonal projection, just get rid of z axis
+		0.f, 1.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 0.f,
+		0.f, 0.f, 0.f, 1.f);*/
+	}
+	// scaling due to zooming
+	Matrix4f camZoom = Matrix4f::createScaling(zoom, zoom, 1.f);
+
+	// Final transformation. Notice the multiplication order
+	// First vertices are moved in camera space
+	// Then the perspective projection puts them in clip space
+	// And a final zooming factor is applied in clip space
+	return prj * camR;
 };
 
 Matrix4f Camera::computeNormalTransform() {
@@ -451,20 +493,20 @@ Matrix4f Camera::computeCameraTransform() {
 
 void Camera::Reset()
 {
-	position.set(0.0f, 0.5f, 2.0f);
+	position.set(0.0f, 0.0f, 5.0f);
 	target.set(0.f, 0.f, -1.f);
 	up.set(0.f, 1.f, 0.f);
 	fov = 30.f;
 	ar = 1.f;  // will be correctly initialized in the "display()" method
 	zNear = 0.1f;
-	zFar = 100.f;
+	zFar = 1000.f;
 	zoom = 1.f;
 }
 
 void Camera::Setpath(std::vector<Vector3f> points) {
 	ctrlpoints = points;
 	int n = points.size()-1;
-	int k, i;
+	long long k, i;
 	binomialcoef.clear();
 	binomialcoef.resize(n+1);
 	for (k = 0; k <= n; k++) {
@@ -473,6 +515,21 @@ void Camera::Setpath(std::vector<Vector3f> points) {
 			binomialcoef[k] *= i;
 		for (i = n - k; i >= 2; i--)
 			binomialcoef[k] /= i;
+	}
+}
+
+void Camera::Setpath2(std::vector<Vector3f> points) {
+	ctrlpoints2 = points;
+	int n = points.size() - 1;
+	long long k, i;
+	binomialcoef2.clear();
+	binomialcoef2.resize(n + 1);
+	for (k = 0; k <= n; k++) {
+		binomialcoef2[k] = 1;
+		for (i = n; i >= k + 1; i--)
+			binomialcoef2[k] *= i;
+		for (i = n - k; i >= 2; i--)
+			binomialcoef2[k] /= i;
 	}
 }
 
@@ -485,4 +542,66 @@ Vector3f Camera::Evaluatepoint(float t) {
 		
 	}
 	return point;
+}
+
+Vector3f Camera::Evaluatepoint2(float t) {
+	Vector3f point = { 0,0,0 };
+	int n = ctrlpoints2.size() - 1;
+	for (int k = 0; k <= n; k++) {
+		float el = binomialcoef2[k] * pow(t, k)*pow(1 - t, n - k);
+		point += ctrlpoints2[k] * el;
+
+	}
+	return point;
+}
+
+bool SkyBox::Load(std::string vertexshader, std::string fragmentshader) {
+	Shaderloader loader;
+
+	if (!loader.Initshaders(vertexshader.data(), fragmentshader.data()))
+		return false;
+
+	ShaderProgram = loader.shader;
+
+	Matrixloc = glGetUniformLocation(ShaderProgram, "matrix");
+	smaplerloc = glGetUniformLocation(ShaderProgram, "cubemap");
+	
+	return true;
+}
+
+bool SkyBox::Loadtextures() {
+	vector<Texture> textures(6);
+	glGenTextures(1, &cubemaptexture);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubemaptexture);
+
+	GLint types[] = { GL_TEXTURE_CUBE_MAP_POSITIVE_X, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z };
+	vector<string> names = { "xpos.png","xneg.png","ypos.png","yneg.png","zpos.png","zneg.png" };
+	for (size_t i = 0; i < 6; i++) {
+		if (!Programm::Loadtexture("Skybox\\" + names[i], textures[i]))
+		 return false;
+
+
+		glTexImage2D(
+			types[i],
+			0,
+			GL_RGB,			// remember to check this
+			textures[i].TextureWidth,
+			textures[i].TextureHeight,
+			0,
+			GL_RGB,			// remember to check this
+			GL_UNSIGNED_BYTE,
+			textures[i].TextureData
+		);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	for (size_t i = 0; i < 6; i++) {
+		textures[i].Delete();
+	}
+	return true;
 }

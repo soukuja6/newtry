@@ -4,6 +4,9 @@
 uniform vec3 camera_position;
 uniform vec3 cameradir;
 
+//draw colours according to height
+uniform bool colourbyheight;
+in float originalzcoordinate;
 
 //directional or head mounted
 uniform bool directional;
@@ -87,10 +90,13 @@ void main() {
 
 	float procentageoftexture = tex_vs_mat;
 
-	if(dist > 20.0) {procentageoftexture = min(procentageoftexture, clamp((7.0 - dist) / 2.0, 0.0, 1.0)); }              // if we are sufficiantly far away from object use only material 
+	if(dist > 200.0) {procentageoftexture = min(procentageoftexture, clamp((220.0 - dist) / 20.0, 0.0, 1.0)); }              // if we are sufficiantly far away from object use only material 
 
 	vec3 diffusecolor =  procentageoftexture * vec3(texture2D(sampler, cur_tex_coords)) + (1.0 - procentageoftexture) * material_d_color;   // blend the material and texture
-
+	if(colourbyheight){
+		diffusecolor = mix(vec3(1.0,0.0,0.0), vec3(1.0,1.0,0.0), smoothstep(0.0,300.0,originalzcoordinate));
+		diffusecolor = mix(diffusecolor, vec3(0.0,0.0,1.0), smoothstep(300.0,650.0,originalzcoordinate));
+		}
 	// parameters for toon shading
 	const int levels = 10;
 	const float scaleFactor = 1.0 / levels;

@@ -15,11 +15,12 @@ void Programm::display() {
 	glViewport(0, 0, width, height);
 
 	// Enable depth test
-	glEnable(GL_DEPTH_TEST);
+	glDisable(GL_DEPTH_TEST);
 
-	// Enable the shader program
-	assert(ShaderProgram != 0);
-	glUseProgram(ShaderProgram);
+	
+	
+
+
 
 	// Set the camera transformation
 	Cam.ar = (1.0f * width) / height;
@@ -28,13 +29,42 @@ void Programm::display() {
 	Matrix4f vertextoworldtr;
 	Matrix4f normaltr;
 
+	{  //-----------------------------------------------------------------skybox-----------------------------------------------------------
+		glUseProgram(skybox.ShaderProgram); 
+
+		glUniformMatrix4fv(skybox.Matrixloc, 1, GL_FALSE, (Cam.computeTransformToworldcoordinates()).get());
+
+		glUniform1i(skybox.smaplerloc, 0);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, skybox.cubemaptexture);
+
+		glBindBuffer(GL_ARRAY_BUFFER, skybox.VBO);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skybox.IBO);
+
+		glEnableVertexAttribArray(0);      
+
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE,
+			0,
+			reinterpret_cast<const GLvoid*>(0));
+
+		glDrawElements(GL_QUADS, skybox.indices.size(), GL_UNSIGNED_INT, 0);
+
+	}
+
+	glEnable(GL_DEPTH_TEST);
+	// Enable the shader program
+	assert(ShaderProgram != 0);
+	glUseProgram(ShaderProgram);
+
+	
 
 	//SET SHADER VARIABLES
 	glUniformMatrix4fv(TrLocation, 1, GL_FALSE, transformation.get());
 
 	glUniform3fv(CameraPositionLoc, 1, Cam.position.get());
 	glUniform3fv(CameraDirLoc, 1, Cam.target.get());
-	
+	glUniform1ui(colourbyheightloc, false);
+
 
 	if (directional) {  //if the directional light is enabled
 		glUniform1ui(DirectionalLoc, true);
@@ -171,7 +201,7 @@ void Programm::display() {
 		glUniform1f(MaterialShineLoc, 5);
 
 
-		vertextoworldtr = Matrix4f::createTranslation(Vector3f{ 0.0, 0.0, -2.0 });
+		vertextoworldtr = Matrix4f::createScaling(10, 10,1)*Matrix4f::createTranslation(Vector3f{ 0.0, 0.2, -20.0 });
 		normaltr.identity();
 		glUniformMatrix4fv(PointTrLocation, 1, GL_FALSE, vertextoworldtr.get());
 		glUniformMatrix4fv(NormalTrLocation, 1, GL_FALSE, normaltr.get());
@@ -199,7 +229,7 @@ void Programm::display() {
 
 	{//---------------------------------------------------draw dragon---------------------------------------------------------------
 
-		vertextoworldtr = Matrix4f::createTranslation(Vector3f{1.0,0.0,-1.0});
+		vertextoworldtr = Matrix4f::createScaling(3, 3, 3) * Matrix4f::createTranslation(Vector3f{1.0,0.5,-5.0});
 		normaltr.identity();
 		glUniform1ui(Bumploc, false);              // no bump mapping
 		glUniform1ui(Toonloc, true);              // apply toon shading 
@@ -243,12 +273,13 @@ void Programm::display() {
 
 	{//---------------------------------------------------draw terrain---------------------------------------------------------------
 
-		vertextoworldtr= Matrix4f::createScaling(0.001,0.001,0.001);
-		normaltr.identity();
+		vertextoworldtr = Matrix4f::createScaling(0.05, 0.05, 0.05)*Matrix4f::createTranslation(Vector3f{ -6000.0f, -39.0f, -7000.0f });
+		normaltr.identity();						//normals dont have to change with translation and scaling;
 		glUniform1ui(Bumploc, false);              // no bump mapping
 		glUniform1ui(Toonloc, false);              // apply toon shading 
 
 		glUniform1f(texturevsmaterialindexloc, texturevsmaterialindex);
+		glUniform1ui(colourbyheightloc, coloursbyheight);
 
 		glActiveTexture(GL_TEXTURE0);
 		glBindTexture(GL_TEXTURE_2D, terrain.texture0.TextureObject);
@@ -257,8 +288,8 @@ void Programm::display() {
 		glUniformMatrix4fv(NormalTrLocation, 1, GL_FALSE, normaltr.get());
 
 		glUniform3f(MaterialAColorLoc, 0, 0.5, 0.5);
-		glUniform3f(MaterialDColorLoc, 0, 0.5, 0.5);
-		glUniform3f(MaterialSColorLoc, 1.0, 1.0, 1.0);
+		glUniform3f(MaterialDColorLoc, 0.5, 0.5, 0.5);
+		glUniform3f(MaterialSColorLoc, 0.1, 0.1, 0.1);
 		glUniform1f(MaterialShineLoc, 20);
 
 
@@ -287,7 +318,7 @@ void Programm::display() {
 	}
 
 
-
+	
 
 
 	// Disable the vertex attributes (not necessary but recommended)
@@ -317,11 +348,14 @@ void Programm::idle() {
 	}
 
 	if (movecamera) {
-		cameracoef += (double)(now - lasttime) / CLOCKS_PER_SEC / 5;
+		cameracoef += (double)(now - lasttime) / CLOCKS_PER_SEC / 25;
 		if (cameracoef >= 1.0)
 			cameracoef -= floor(cameracoef);
-
-		Cam.position = Cam.Evaluatepoint(cameracoef);
+		if (movecamera2) {
+			Cam.target = Cam.Evaluatepoint2(cameracoef);
+			Vector3f temp = Cam.target.cross(Vector3f{ 0.0f,1.0f,0.0f });
+			Cam.up = temp.cross(Cam.target);
+		}Cam.position = Cam.Evaluatepoint(cameracoef);
 	}
 
 	difference += (double)(now- lasttime)/CLOCKS_PER_SEC /5;
@@ -415,9 +449,20 @@ void Programm::keyboard(unsigned char key, int x, int y) {
 		rotatebuilding = !rotatebuilding;
 		break;
 
+	case 'h':  // terminate the application
+		if (movecamera) {
+			movecamera2 = !movecamera2;
+		}
+		break; 
+
 	case 'n':  // terminate the application
 		movecamera = !movecamera;
+		movecamera2 = true;
 		cameracoef = 0;
+		break;
+
+	case 'b':  
+		coloursbyheight = !coloursbyheight;
 		break;
 	case 'q':  // terminate the application
 		exit(0);
@@ -432,7 +477,23 @@ void Programm::keyboard(unsigned char key, int x, int y) {
 		texturevsmaterialindex -= 0.02;
 		texturevsmaterialindex = max(texturevsmaterialindex, 0.0);
 		break;
+
+	case '1':
+		terrain.Reset();
+		InitTerrain("terrain\\bergen_1024x918.bin");
+		break;
+
+	case '2':
+		terrain.Reset();
+		InitTerrain("terrain\\bergen_2048x1836.bin");
+		break;
+
+	case '3':
+		terrain.Reset();
+		InitTerrain("terrain\\bergen_3072x2754.bin");
+		break;
 	}
+
 	// redraw
 	glutPostRedisplay();
 }

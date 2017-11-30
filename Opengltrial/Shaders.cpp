@@ -82,6 +82,7 @@ bool Shaderloader::Initshaders(const char * vertexShaderFilename, const char * f
 		return false;
 	}
 
+	/*
 	// Get the location of the uniform variables
 	TrLocation = glGetUniformLocation(ShaderProgram, "transformation");
 	PointTrLocation = glGetUniformLocation(ShaderProgram, "vertextransformation");
@@ -92,6 +93,7 @@ bool Shaderloader::Initshaders(const char * vertexShaderFilename, const char * f
 	BumpLoc = glGetUniformLocation(ShaderProgram, "applybump");
 	Toonloc = glGetUniformLocation(ShaderProgram, "applytoon");
 	texturevsmaterialindex = glGetUniformLocation(ShaderProgram, "tex_vs_mat");
+	colourbyheightloc = glGetUniformLocation(ShaderProgram, "colourbyheight");
 
 	DLightDirLoc = glGetUniformLocation(ShaderProgram, "d_light_direction");
 	DLightAColorLoc = glGetUniformLocation(ShaderProgram, "d_light_a_color");
@@ -118,7 +120,7 @@ bool Shaderloader::Initshaders(const char * vertexShaderFilename, const char * f
 	MaterialSColorLoc = glGetUniformLocation(ShaderProgram, "material_s_color");
 	MaterialShineLoc = glGetUniformLocation(ShaderProgram, "material_shininess");
 	
-	assert(TrLocation != -1);  // check for errors (variable not found)
+	//assert(TrLocation != -1);  // check for errors (variable not found)*/
 
 
 	// Shaders can be deleted now

@@ -12,7 +12,7 @@ public:
 	bool Initshaders(const char* vertexShaderFilename,
 		const char* fragmentShaderFilename);
 	GLuint shader;                        //actual shader
-	GLint TrLocation = -1;                //location of transformation variable in shader
+/*	GLint TrLocation = -1;                //location of transformation variable in shader
 	
 	GLint PointTrLocation = -1;           //trandofrmation to world coordinates
 	GLint NormalTrLocation = -1;          //transofrmation of normals to world coordinates
@@ -22,7 +22,7 @@ public:
 	GLint BumpLoc = -1;                     //true=applybump  false= not apply
 	GLint Toonloc = -1;
 	GLint texturevsmaterialindex = -1;
-
+	GLint colourbyheightloc = -1;
 	GLint DLightDirLoc = -1;
 	GLint DLightAColorLoc = -1;
 	GLint DLightDColorLoc = -1;
@@ -47,7 +47,7 @@ public:
 	GLint MaterialAColorLoc = -1;
 	GLint MaterialDColorLoc = -1;
 	GLint MaterialSColorLoc = -1;
-	GLint MaterialShineLoc = -1;
+	GLint MaterialShineLoc = -1;*/
 private:
 	std::string readTextFile(const std::string& pathAndFileName);
 };
