@@ -29,10 +29,11 @@ void Programm::display() {
 	Matrix4f vertextoworldtr;
 	Matrix4f normaltr;
 
-	{  //-----------------------------------------------------------------skybox-----------------------------------------------------------
+	if(!fogenabled && directional)  //Draw skybox only if not drawing fog
+		{  //-----------------------------------------------------------------skybox-----------------------------------------------------------
 		glUseProgram(skybox.ShaderProgram); 
 
-		glUniformMatrix4fv(skybox.Matrixloc, 1, GL_FALSE, (Cam.computeTransformToworldcoordinates()).get());
+		glUniformMatrix4fv(skybox.Matrixloc, 1, GL_FALSE, (Cam.computeTransformToworldcoordinates()*Matrix4f::createScaling(50, 50, 50)).get());
 
 		glUniform1i(skybox.smaplerloc, 0);
 		glActiveTexture(GL_TEXTURE0);
@@ -49,7 +50,7 @@ void Programm::display() {
 
 		glDrawElements(GL_QUADS, skybox.indices.size(), GL_UNSIGNED_INT, 0);
 
-	}
+		}
 
 	glEnable(GL_DEPTH_TEST);
 	// Enable the shader program
@@ -60,6 +61,7 @@ void Programm::display() {
 
 	//SET SHADER VARIABLES
 	glUniformMatrix4fv(TrLocation, 1, GL_FALSE, transformation.get());
+	glUniform1ui(fogenabledloc, fogenabled);
 
 	glUniform3fv(CameraPositionLoc, 1, Cam.position.get());
 	glUniform3fv(CameraDirLoc, 1, Cam.target.get());
@@ -288,7 +290,7 @@ void Programm::display() {
 		glUniformMatrix4fv(NormalTrLocation, 1, GL_FALSE, normaltr.get());
 
 		glUniform3f(MaterialAColorLoc, 0, 0.5, 0.5);
-		glUniform3f(MaterialDColorLoc, 0.5, 0.5, 0.5);
+		glUniform3f(MaterialDColorLoc, 0.3, 0.3, 0.3);
 		glUniform3f(MaterialSColorLoc, 0.1, 0.1, 0.1);
 		glUniform1f(MaterialShineLoc, 20);
 
@@ -352,9 +354,9 @@ void Programm::idle() {
 		if (cameracoef >= 1.0)
 			cameracoef -= floor(cameracoef);
 		if (movecamera2) {
-			Cam.target = Cam.Evaluatepoint2(cameracoef);
-			Vector3f temp = Cam.target.cross(Vector3f{ 0.0f,1.0f,0.0f });
-			Cam.up = temp.cross(Cam.target);
+			Cam.target = Cam.Evaluatepoint2(cameracoef).getNormalized();
+			Vector3f temp = Cam.target.cross(Vector3f{ 0.0f,1.0f,0.0f }).getNormalized();
+			Cam.up = temp.cross(Cam.target).getNormalized();
 		}Cam.position = Cam.Evaluatepoint(cameracoef);
 	}
 
@@ -375,24 +377,24 @@ void Programm::keyboard(unsigned char key, int x, int y) {
 	switch (tolower(key)) {
 		// --- camera movements ---
 	case 'w':
-		Cam.position += Cam.target * 0.1f;
+		Cam.position += Cam.target * 0.5f;
 		break;
 	case 'a':
 		right = Cam.target.cross(Cam.up);
-		Cam.position -= right * 0.1f;
+		Cam.position -= right * 0.5f;
 		break;
 	case 's':
-		Cam.position -= Cam.target * 0.1f;
+		Cam.position -= Cam.target * 0.5f;
 		break;
 	case 'd':
 		right = Cam.target.cross(Cam.up);
-		Cam.position += right * 0.1f;
+		Cam.position += right * 0.5f;
 		break;
 	case 'c':
-		Cam.position -= Cam.up * 0.1f;
+		Cam.position -= Cam.up * 0.5f;
 		break;
 	case ' ':
-		Cam.position += Cam.up * 0.1f;
+		Cam.position += Cam.up * 0.5f;
 		break;
 	case 'r': // Reset camera status
 		Cam.Reset();
@@ -408,30 +410,14 @@ void Programm::keyboard(unsigned char key, int x, int y) {
 			Cam.projection = Projections::Perspective;
 		break;
 
-	case 'k': //change shader
-		if (shadertype == Shadertype::FragmentIllumination) {
-			if (LoadShaders("shader.v.glsl", "shader.f.glsl")) {
-				shadertype = Shadertype::Vertexillumination;
-				cout << "> done." << endl;
-			}
-			else {
-				cout << "> not possible." << endl;
-			}
-		}
-		else {
-			if (LoadShaders("Vertexshader.glsl", "Fragmentshader.glsl")) {
-				cout << "> done." << endl;
-				shadertype = Shadertype::FragmentIllumination;
-			}
-			else {
-				cout << "> not possible." << endl;
-			}
-			
-		}break;
+
 		// --- utilities ---
 
 	case 'p': // change to wireframe rendering
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		break;
+	case 'f': // change light option
+		fogenabled = !fogenabled;
 		break;
 	case 'l': // change light option
 		directional = !directional;

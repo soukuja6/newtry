@@ -132,9 +132,9 @@ struct HeadLight : Light {        //spot light mounted on head with restricted l
 	}
 	void Reset() {
 		Light::Reset();
-		klinear = 0.005f;
-		ksquared = 0.05f;
-		anglerestriction = 20;
+		klinear = 0.0001f;
+		ksquared = 0.001f;
+		anglerestriction = 40;
 		angledecreasecoef = 10;
 	}
 
@@ -252,7 +252,7 @@ public:
 		lasttime = clock();
 		texturevsmaterialindex = 1.0;
 		Cam.Setpath({ { 0.0f, 0.0f, 5.0f },{ 10.0f, 0.0f, 5.0f },{ 3.0f, 0.5f, -8.0f },{ 3.0f, 100.0f, -8.0f },{ -20.0f, 100.0f, -500.0f }, { -20.0f, 100.0f, -8.0f },{ -20.0f, 0.5f, -8.0f },{ -10.0f, 0.0f, 5.0f },{ 0.0f, 0.0f, 5.0f } });  
-		Cam.Setpath2({ { 0.0f, 0.0f, -1.0f }, { 0.0f, -0.1f, -1.0f },{ 0.0f,  -0.1f, 0.0f }, { -1.0f,  -0.1f, 0.0f },{ 0.0f,  -0.1f, 1.0f },{ 1.0f, 0.0f, 0.0f },{ 0.0f, 0.0f, -1.0f },{ 0.0f, 0.0f, -1.0f } });
+		Cam.Setpath2({ { 0.0f, 0.0f, -1.0f }, { 0.0f, -0.1f, -1.0f },{ 0.0f,  -0.1f, 0.0f }, { -1.0f,  -0.1f, 0.0f },{ 0.0f,  -0.1f, 1.0f },{ 1.0f, -0.1f, 0.0f },{ 0.0f, 0.0f, -1.0f },{ 0.0f, 0.0f, -1.0f } });
 		Cam.Evaluatepoint(0.5);
 	}
 
@@ -296,6 +296,8 @@ public:
 	// 3D model
 	Modelclass building;
 
+	bool fogenabled = false;
+	GLint fogenabledloc = -1;
 	bool movecamera = false;
 	bool movecamera2 = false;
 	bool coloursbyheight = false;

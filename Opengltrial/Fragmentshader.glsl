@@ -8,6 +8,9 @@ uniform vec3 cameradir;
 uniform bool colourbyheight;
 in float originalzcoordinate;
 
+//render for or not
+uniform bool fogenabled;
+
 //directional or head mounted
 uniform bool directional;
 
@@ -66,6 +69,7 @@ in vec3 tangentout;
 // Per-frgament output color
 out vec4 FragColor;
 
+const vec3 fogColor = vec3(0.5, 0.5,0.5);
 
 void main() { 
 	vec3 normal_nn;
@@ -85,7 +89,7 @@ void main() {
 	}
    
 	vec3 view_dir_nn = normalize(camera_position - positionout);
-	vec4 fcolor;
+	vec3 fcolor;
 	float dist = length(camera_position - positionout);
 
 	float procentageoftexture = tex_vs_mat;
@@ -145,7 +149,7 @@ void main() {
 				amb_color + diff_color + spec_color * speccoef,
 				0.0, 1.0);    
 
-		fcolor = vec4(color * edgeDetection, 1.0);
+		fcolor = color * edgeDetection;
 	}
 	else{
 		// TODO: do the same for the headlight!
@@ -206,9 +210,19 @@ void main() {
 				0.0, 1.0);    
 
 		// pass the result 
-		fcolor = vec4(edgeDetection * color, 1.0);
+		fcolor = edgeDetection * color;
 	}
+	float FogDensity = 0.05;
+
+	float fogFactor = 1;
+	if(fogenabled) 
+		fogFactor = 1.0 /exp(dist * FogDensity);
+    fogFactor = clamp( fogFactor, 0.0, 1.0 );
+ 
+    //if you inverse color in glsl mix function you have to
+    //put 1.0 - fogFactor
+    vec3 finalcolour = mix(fogColor, fcolor, fogFactor);
 
 	// Set the output color according to the input
-    FragColor = fcolor;
+    FragColor = vec4(finalcolour,1.0);
 }

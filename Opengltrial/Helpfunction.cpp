@@ -396,6 +396,8 @@ bool Programm::LoadShaders(std::string vertexshader, std::string fragmentshader)
 	MaterialSColorLoc = glGetUniformLocation(ShaderProgram, "material_s_color");
 	MaterialShineLoc = glGetUniformLocation(ShaderProgram, "material_shininess");
 
+	fogenabledloc = glGetUniformLocation(ShaderProgram, "fogenabled");
+
 	assert(TrLocation != -1);  // check for errors (variable not found)
 
 	return true;
@@ -496,7 +498,7 @@ void Camera::Reset()
 	position.set(0.0f, 0.0f, 5.0f);
 	target.set(0.f, 0.f, -1.f);
 	up.set(0.f, 1.f, 0.f);
-	fov = 30.f;
+	fov = 50.f;
 	ar = 1.f;  // will be correctly initialized in the "display()" method
 	zNear = 0.1f;
 	zFar = 1000.f;

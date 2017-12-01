@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
 		return -1;
 
 
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);          // We'll Clear To The Color Of The Fog ( Modified )
+	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);          // Clear To The Color Of The Fog ( Modified )
 	
 
 	// Start the main event loop
